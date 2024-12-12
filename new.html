@@ -16,7 +16,7 @@
         function initializeConnection() {
             peerConnection = new RTCPeerConnection(config);
 
-            peerConnection.onicecandidate = () => {
+            peerConnection.onicecandidate = (event) => {
                 if (peerConnection.iceGatheringState === "complete") {
                     document.getElementById("connection-data").value = JSON.stringify(peerConnection.localDescription);
                 }
@@ -31,8 +31,6 @@
 
             peerConnection.createOffer().then((offer) => {
                 return peerConnection.setLocalDescription(offer);
-            }).then(() => {
-                console.log("Offer created and set as local description.");
             }).catch(console.error);
         }
 
@@ -56,7 +54,7 @@
             if (!peerConnection) {
                 peerConnection = new RTCPeerConnection(config);
 
-                peerConnection.onicecandidate = () => {
+                peerConnection.onicecandidate = (event) => {
                     if (peerConnection.iceGatheringState === "complete") {
                         document.getElementById("connection-data").value = JSON.stringify(peerConnection.localDescription);
                     }
@@ -92,12 +90,12 @@
 <body>
     <h1>Simple Secure Chat</h1>
 
-    <h2>Step 1: Initialize Connection</h2>
-    <button onclick="initializeConnection()">Initialize</button>
-    <textarea id="connection-data" placeholder="Share this connection data with your friend"></textarea>
+    <h2>Step 1: Generate or Paste Connection Code</h2>
+    <button onclick="initializeConnection()">Generate Code</button>
+    <textarea id="connection-data" placeholder="Share this connection code with your friend"></textarea>
 
-    <h2>Step 2: Paste Connection Data</h2>
-    <textarea id="connection-input" placeholder="Paste your friend's connection data here"></textarea>
+    <h2>Step 2: Paste Code to Connect</h2>
+    <textarea id="connection-input" placeholder="Paste your friend's connection code here"></textarea>
     <button onclick="handleConnectionData()">Connect</button>
 
     <h2>Chat</h2>
@@ -105,6 +103,5 @@
     <br>
     <input id="message-input" type="text" placeholder="Type your message" disabled>
     <button onclick="sendMessage()">Send</button>
-    <footer>ahmed Saeed</footer>
 </body>
 </html>
