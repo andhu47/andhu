@@ -6,6 +6,7 @@
     <title>Simple Secure Chat</title>
     <script>
         let peerConnection;
+        let dataChannel;
         const config = {
             iceServers: [
                 { urls: "stun:stun.l.google.com:19302" },
@@ -21,27 +22,12 @@
                 }
             };
 
-            peerConnection.ondatachannel = (event) => {
-                const receiveChannel = event.channel;
-                receiveChannel.onmessage = (e) => {
-                    const messageBox = document.getElementById("chat-box");
-                    messageBox.value += `Friend: ${e.data}\n`;
-                };
-            };
-
-            const dataChannel = peerConnection.createDataChannel("chat");
-            dataChannel.onopen = () => {
-                document.getElementById("message-input").disabled = false;
-            };
-
-            dataChannel.onmessage = (e) => {
-                const messageBox = document.getElementById("chat-box");
-                messageBox.value += `Friend: ${e.data}\n`;
-            };
+            dataChannel = peerConnection.createDataChannel("chat");
+            setupDataChannel(dataChannel);
 
             peerConnection.createOffer().then((offer) => {
-                peerConnection.setLocalDescription(offer);
-            });
+                return peerConnection.setLocalDescription(offer);
+            }).catch(console.error);
         }
 
         function createAnswer() {
@@ -54,32 +40,46 @@
             };
 
             peerConnection.ondatachannel = (event) => {
-                const receiveChannel = event.channel;
-                receiveChannel.onmessage = (e) => {
-                    const messageBox = document.getElementById("chat-box");
-                    messageBox.value += `Friend: ${e.data}\n`;
-                };
+                setupDataChannel(event.channel);
             };
 
             const offer = JSON.parse(document.getElementById("offer-input").value);
             peerConnection.setRemoteDescription(new RTCSessionDescription(offer)).then(() => {
-                peerConnection.createAnswer().then((answer) => {
-                    peerConnection.setLocalDescription(answer);
-                });
-            });
+                return peerConnection.createAnswer();
+            }).then((answer) => {
+                return peerConnection.setLocalDescription(answer);
+            }).catch(console.error);
         }
 
         function finalizeConnection() {
             const answer = JSON.parse(document.getElementById("answer-input").value);
-            peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+            peerConnection.setRemoteDescription(new RTCSessionDescription(answer)).catch(console.error);
+        }
+
+        function setupDataChannel(channel) {
+            channel.onopen = () => {
+                console.log("Data channel is open");
+                document.getElementById("message-input").disabled = false;
+            };
+
+            channel.onmessage = (event) => {
+                const messageBox = document.getElementById("chat-box");
+                messageBox.value += `Friend: ${event.data}\n`;
+            };
+
+            dataChannel = channel;
         }
 
         function sendMessage() {
             const message = document.getElementById("message-input").value;
-            peerConnection.dataChannel.send(message);
-            const messageBox = document.getElementById("chat-box");
-            messageBox.value += `You: ${message}\n`;
-            document.getElementById("message-input").value = "";
+            if (dataChannel && dataChannel.readyState === "open") {
+                dataChannel.send(message);
+                const messageBox = document.getElementById("chat-box");
+                messageBox.value += `You: ${message}\n`;
+                document.getElementById("message-input").value = "";
+            } else {
+                alert("Data channel is not open. Unable to send message.");
+            }
         }
     </script>
 </head>
