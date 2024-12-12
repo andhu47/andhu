@@ -17,7 +17,7 @@
             peerConnection = new RTCPeerConnection(config);
 
             peerConnection.onicecandidate = (event) => {
-                if (event.candidate) {
+                if (!event.candidate) {
                     document.getElementById("connection-data").value = JSON.stringify(peerConnection.localDescription);
                 }
             };
@@ -28,6 +28,10 @@
 
             dataChannel = peerConnection.createDataChannel("chat");
             setupDataChannel(dataChannel);
+
+            peerConnection.createOffer().then((offer) => {
+                return peerConnection.setLocalDescription(offer);
+            }).catch(console.error);
         }
 
         function setupDataChannel(channel) {
