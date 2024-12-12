@@ -3,85 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secure P2P Chat</title>
-    <script src="https://cdn.jsdelivr.net/npm/simple-peer@9.11.1/simplepeer.min.js"></script>
+    <title>Simple Secure Chat</title>
     <script>
-        let peer;
+        let peerConnection;
+        const config = {
+            iceServers: [
+                { urls: "stun:stun.l.google.com:19302" },
+            ],
+        };
 
-        function generateIdentifier() {
-            const identifier = Math.random().toString(36).substring(2, 15);
-            document.getElementById('identifier').innerText = identifier;
-            return identifier;
+        function createOffer() {
+            peerConnection = new RTCPeerConnection(config);
+
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    document.getElementById("offer-output").value = JSON.stringify(peerConnection.localDescription);
+                }
+            };
+
+            peerConnection.ondatachannel = (event) => {
+                const receiveChannel = event.channel;
+                receiveChannel.onmessage = (e) => {
+                    const messageBox = document.getElementById("chat-box");
+                    messageBox.value += `Friend: ${e.data}\n`;
+                };
+            };
+
+            const dataChannel = peerConnection.createDataChannel("chat");
+            dataChannel.onopen = () => {
+                document.getElementById("message-input").disabled = false;
+            };
+
+            dataChannel.onmessage = (e) => {
+                const messageBox = document.getElementById("chat-box");
+                messageBox.value += `Friend: ${e.data}\n`;
+            };
+
+            peerConnection.createOffer().then((offer) => {
+                peerConnection.setLocalDescription(offer);
+            });
         }
 
-        function setupPeer(isInitiator) {
-            peer = new SimplePeer({ initiator: isInitiator, trickle: false });
+        function createAnswer() {
+            peerConnection = new RTCPeerConnection(config);
 
-            peer.on('signal', data => {
-                document.getElementById('signal-data').value = JSON.stringify(data);
-            });
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    document.getElementById("answer-output").value = JSON.stringify(peerConnection.localDescription);
+                }
+            };
 
-            peer.on('connect', () => {
-                document.getElementById('status').innerText = 'Connected';
-                document.getElementById('message-input').disabled = false;
-            });
+            peerConnection.ondatachannel = (event) => {
+                const receiveChannel = event.channel;
+                receiveChannel.onmessage = (e) => {
+                    const messageBox = document.getElementById("chat-box");
+                    messageBox.value += `Friend: ${e.data}\n`;
+                };
+            };
 
-            peer.on('data', data => {
-                const messageArea = document.getElementById('messages');
-                messageArea.value += `Friend: ${data}\n`;
+            const offer = JSON.parse(document.getElementById("offer-input").value);
+            peerConnection.setRemoteDescription(new RTCSessionDescription(offer)).then(() => {
+                peerConnection.createAnswer().then((answer) => {
+                    peerConnection.setLocalDescription(answer);
+                });
             });
         }
 
-        function sendSignalData() {
-            const data = JSON.parse(document.getElementById('signal-data-input').value);
-            peer.signal(data);
+        function finalizeConnection() {
+            const answer = JSON.parse(document.getElementById("answer-input").value);
+            peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
         }
 
         function sendMessage() {
-            const messageInput = document.getElementById('message-input');
-            const messageArea = document.getElementById('messages');
-            const message = messageInput.value;
-            messageArea.value += `You: ${message}\n`;
-            peer.send(message);
-            messageInput.value = '';
+            const message = document.getElementById("message-input").value;
+            peerConnection.dataChannel.send(message);
+            const messageBox = document.getElementById("chat-box");
+            messageBox.value += `You: ${message}\n`;
+            document.getElementById("message-input").value = "";
         }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const identifier = generateIdentifier();
-
-            document.getElementById('start-chat').addEventListener('click', () => {
-                setupPeer(true);
-            });
-
-            document.getElementById('join-chat').addEventListener('click', () => {
-                setupPeer(false);
-            });
-
-            document.getElementById('send-signal').addEventListener('click', sendSignalData);
-
-            document.getElementById('send-message').addEventListener('click', sendMessage);
-        });
     </script>
 </head>
 <body>
-    <h1>Secure P2P Chat</h1>
-    <p>Your Identifier: <span id="identifier"></span></p>
-    
-    <button id="start-chat">Start Chat</button>
-    <button id="join-chat">Join Chat</button>
+    <h1>Simple Secure Chat</h1>
 
-    <h2>Connection Setup</h2>
-    <textarea id="signal-data" placeholder="Share this signal data with your friend"></textarea>
-    <br>
-    <textarea id="signal-data-input" placeholder="Paste your friend's signal data here"></textarea>
-    <button id="send-signal">Send Signal</button>
+    <h2>Step 1: Create Offer</h2>
+    <button onclick="createOffer()">Create Offer</button>
+    <textarea id="offer-output" placeholder="Copy this offer to share"></textarea>
+
+    <h2>Step 2: Create Answer</h2>
+    <textarea id="offer-input" placeholder="Paste offer here"></textarea>
+    <button onclick="createAnswer()">Create Answer</button>
+    <textarea id="answer-output" placeholder="Copy this answer to share"></textarea>
+
+    <h2>Step 3: Finalize Connection</h2>
+    <textarea id="answer-input" placeholder="Paste answer here"></textarea>
+    <button onclick="finalizeConnection()">Finalize Connection</button>
 
     <h2>Chat</h2>
-    <textarea id="messages" readonly style="width: 100%; height: 200px;"></textarea>
+    <textarea id="chat-box" readonly style="width: 100%; height: 200px;"></textarea>
     <br>
     <input id="message-input" type="text" placeholder="Type your message" disabled>
-    <button id="send-message">Send</button>
-
-    <p id="status">Status: Not Connected</p>
+    <button onclick="sendMessage()">Send</button>
 </body>
 </html>
