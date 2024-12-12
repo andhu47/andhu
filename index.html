@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure P2P Chat</title>
+    <script src="https://cdn.jsdelivr.net/npm/simple-peer@9.11.1/simplepeer.min.js"></script>
+    <script>
+        let peer;
+
+        function generateIdentifier() {
+            const identifier = Math.random().toString(36).substring(2, 15);
+            document.getElementById('identifier').innerText = identifier;
+            return identifier;
+        }
+
+        function setupPeer(isInitiator) {
+            peer = new SimplePeer({ initiator: isInitiator, trickle: false });
+
+            peer.on('signal', data => {
+                document.getElementById('signal-data').value = JSON.stringify(data);
+            });
+
+            peer.on('connect', () => {
+                document.getElementById('status').innerText = 'Connected';
+                document.getElementById('message-input').disabled = false;
+            });
+
+            peer.on('data', data => {
+                const messageArea = document.getElementById('messages');
+                messageArea.value += `Friend: ${data}\n`;
+            });
+        }
+
+        function sendSignalData() {
+            const data = JSON.parse(document.getElementById('signal-data-input').value);
+            peer.signal(data);
+        }
+
+        function sendMessage() {
+            const messageInput = document.getElementById('message-input');
+            const messageArea = document.getElementById('messages');
+            const message = messageInput.value;
+            messageArea.value += `You: ${message}\n`;
+            peer.send(message);
+            messageInput.value = '';
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const identifier = generateIdentifier();
+
+            document.getElementById('start-chat').addEventListener('click', () => {
+                setupPeer(true);
+            });
+
+            document.getElementById('join-chat').addEventListener('click', () => {
+                setupPeer(false);
+            });
+
+            document.getElementById('send-signal').addEventListener('click', sendSignalData);
+
+            document.getElementById('send-message').addEventListener('click', sendMessage);
+        });
+    </script>
+</head>
+<body>
+    <h1>Secure P2P Chat</h1>
+    <p>Your Identifier: <span id="identifier"></span></p>
+    
+    <button id="start-chat">Start Chat</button>
+    <button id="join-chat">Join Chat</button>
+
+    <h2>Connection Setup</h2>
+    <textarea id="signal-data" placeholder="Share this signal data with your friend"></textarea>
+    <br>
+    <textarea id="signal-data-input" placeholder="Paste your friend's signal data here"></textarea>
+    <button id="send-signal">Send Signal</button>
+
+    <h2>Chat</h2>
+    <textarea id="messages" readonly style="width: 100%; height: 200px;"></textarea>
+    <br>
+    <input id="message-input" type="text" placeholder="Type your message" disabled>
+    <button id="send-message">Send</button>
+
+    <p id="status">Status: Not Connected</p>
+</body>
+</html>
