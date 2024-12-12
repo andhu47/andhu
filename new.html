@@ -7,12 +7,19 @@
     <script src="https://cdn.jsdelivr.net/npm/simple-peer/simplepeer.min.js"></script>
     <script>
         let peer;
+        let shortCodeMap = {};
+
+        function generateShortCode() {
+            return Math.floor(10000 + Math.random() * 90000).toString();
+        }
 
         function initializeConnection(isInitiator) {
             peer = new SimplePeer({ initiator: isInitiator, trickle: false });
 
             peer.on('signal', data => {
-                document.getElementById('connection-data').value = JSON.stringify(data);
+                const shortCode = generateShortCode();
+                shortCodeMap[shortCode] = JSON.stringify(data);
+                document.getElementById('connection-data').value = shortCode;
             });
 
             peer.on('connect', () => {
@@ -27,8 +34,15 @@
         }
 
         function connectToPeer() {
-            const connectionData = JSON.parse(document.getElementById('connection-input').value);
-            peer.signal(connectionData);
+            const shortCode = document.getElementById('connection-input').value;
+            const connectionData = shortCodeMap[shortCode];
+
+            if (!connectionData) {
+                alert('Invalid code. Please try again.');
+                return;
+            }
+
+            peer.signal(JSON.parse(connectionData));
         }
 
         function sendMessage() {
@@ -56,9 +70,9 @@
     <button id="start-connection">Start Connection</button>
     <button id="join-connection">Join Connection</button>
 
-    <h2>Step 2: Share or Paste Connection Data</h2>
-    <textarea id="connection-data" placeholder="Share this connection data with your friend"></textarea>
-    <textarea id="connection-input" placeholder="Paste your friend's connection data here"></textarea>
+    <h2>Step 2: Share or Enter Short Code</h2>
+    <input id="connection-data" placeholder="Share this short code with your friend" readonly>
+    <input id="connection-input" placeholder="Enter your friend's short code">
     <button onclick="connectToPeer()">Connect</button>
 
     <h2>Chat</h2>
