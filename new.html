@@ -13,17 +13,20 @@
             ],
         };
 
-        window.onload = () => {
-            initializeConnection();
-        };
-
         function initializeConnection() {
             peerConnection = new RTCPeerConnection(config);
 
-            peerConnection.onicecandidate = (event) => {
-                if (!event.candidate) {
-                    const shortCode = btoa(JSON.stringify(peerConnection.localDescription)).substring(0, 50);
-                    document.getElementById("connection-data").value = shortCode;
+            peerConnection.onicecandidate = () => {
+                if (peerConnection.iceGatheringState === "complete") {
+                    const connectionCode = btoa(JSON.stringify(peerConnection.localDescription));
+                    document.getElementById("connection-data").value = connectionCode;
+                }
+            };
+
+            peerConnection.onicegatheringstatechange = () => {
+                if (peerConnection.iceGatheringState === "complete") {
+                    const connectionCode = btoa(JSON.stringify(peerConnection.localDescription));
+                    document.getElementById("connection-data").value = connectionCode;
                 }
             };
 
@@ -41,7 +44,6 @@
 
         function setupDataChannel(channel) {
             channel.onopen = () => {
-                console.log("Data channel is open");
                 document.getElementById("message-input").disabled = false;
             };
 
@@ -54,18 +56,11 @@
         }
 
         function handleConnectionData() {
-            const shortCode = document.getElementById("connection-input").value;
-            const connectionData = JSON.parse(atob(shortCode));
+            const connectionCode = document.getElementById("connection-input").value;
+            const connectionData = JSON.parse(atob(connectionCode));
 
             if (!peerConnection) {
                 peerConnection = new RTCPeerConnection(config);
-
-                peerConnection.onicecandidate = (event) => {
-                    if (!event.candidate) {
-                        const shortCode = btoa(JSON.stringify(peerConnection.localDescription)).substring(0, 50);
-                        document.getElementById("connection-data").value = shortCode;
-                    }
-                };
 
                 peerConnection.ondatachannel = (event) => {
                     setupDataChannel(event.channel);
@@ -74,9 +69,9 @@
 
             peerConnection.setRemoteDescription(new RTCSessionDescription(connectionData)).then(() => {
                 if (connectionData.type === "offer") {
-                    return peerConnection.createAnswer().then((answer) => {
+                    peerConnection.createAnswer().then((answer) => {
                         return peerConnection.setLocalDescription(answer);
-                    });
+                    }).catch(console.error);
                 }
             }).catch(console.error);
         }
@@ -92,6 +87,8 @@
                 alert("Data channel is not open. Unable to send message.");
             }
         }
+
+        window.onload = initializeConnection;
     </script>
 </head>
 <body>
