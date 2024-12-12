@@ -13,24 +13,15 @@
             ],
         };
 
-        window.onload = () => {
-            initializeConnection();
-        };
-
-        function initializeConnection() {
+        function initializeConnection(isInitiator) {
             peerConnection = new RTCPeerConnection(config);
 
-            peerConnection.onicecandidate = () => {
-                if (peerConnection.iceGatheringState === "complete") {
-                    const shortCode = btoa(JSON.stringify(peerConnection.localDescription));
-                    document.getElementById("connection-data").value = shortCode;
-                }
-            };
-
-            peerConnection.onicegatheringstatechange = () => {
-                if (peerConnection.iceGatheringState === "complete") {
-                    const shortCode = btoa(JSON.stringify(peerConnection.localDescription));
-                    document.getElementById("connection-data").value = shortCode;
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) return;
+                if (isInitiator) {
+                    peerConnection.createOffer().then((offer) => {
+                        return peerConnection.setLocalDescription(offer);
+                    }).catch(console.error);
                 }
             };
 
@@ -38,12 +29,10 @@
                 setupDataChannel(event.channel);
             };
 
-            dataChannel = peerConnection.createDataChannel("chat");
-            setupDataChannel(dataChannel);
-
-            peerConnection.createOffer().then((offer) => {
-                return peerConnection.setLocalDescription(offer);
-            }).catch(console.error);
+            if (isInitiator) {
+                dataChannel = peerConnection.createDataChannel("chat");
+                setupDataChannel(dataChannel);
+            }
         }
 
         function setupDataChannel(channel) {
@@ -59,30 +48,28 @@
             dataChannel = channel;
         }
 
-        function handleConnectionData() {
-            const shortCode = document.getElementById("connection-input").value;
-            const connectionData = JSON.parse(atob(shortCode));
+        function connect() {
+            const connectionInput = document.getElementById("connection-input").value;
+            const connectionData = JSON.parse(connectionInput);
 
-            if (!peerConnection) {
-                peerConnection = new RTCPeerConnection(config);
+            peerConnection = new RTCPeerConnection(config);
 
-                peerConnection.onicecandidate = () => {
-                    if (peerConnection.iceGatheringState === "complete") {
-                        const shortCode = btoa(JSON.stringify(peerConnection.localDescription));
-                        document.getElementById("connection-data").value = shortCode;
-                    }
-                };
+            peerConnection.onicecandidate = (event) => {
+                if (!event.candidate) {
+                    const connectionOutput = JSON.stringify(peerConnection.localDescription);
+                    document.getElementById("connection-output").value = connectionOutput;
+                }
+            };
 
-                peerConnection.ondatachannel = (event) => {
-                    setupDataChannel(event.channel);
-                };
-            }
+            peerConnection.ondatachannel = (event) => {
+                setupDataChannel(event.channel);
+            };
 
             peerConnection.setRemoteDescription(new RTCSessionDescription(connectionData)).then(() => {
                 if (connectionData.type === "offer") {
-                    return peerConnection.createAnswer().then((answer) => {
+                    peerConnection.createAnswer().then((answer) => {
                         return peerConnection.setLocalDescription(answer);
-                    });
+                    }).catch(console.error);
                 }
             }).catch(console.error);
         }
@@ -98,17 +85,20 @@
                 alert("Data channel is not open. Unable to send message.");
             }
         }
+
+        window.onload = () => {
+            initializeConnection(true);
+        };
     </script>
 </head>
 <body>
     <h1>Simple Secure Chat</h1>
 
-    <h2>Step 1: Share or Paste Connection Code</h2>
-    <textarea id="connection-data" placeholder="Share this connection code with your friend"></textarea>
+    <h2>Step 1: Connect</h2>
+    <textarea id="connection-input" placeholder="Paste connection data here"></textarea>
+    <button onclick="connect()">Connect</button>
 
-    <h2>Step 2: Paste Code to Connect</h2>
-    <textarea id="connection-input" placeholder="Paste your friend's connection code here"></textarea>
-    <button onclick="handleConnectionData()">Connect</button>
+    <textarea id="connection-output" placeholder="Your connection data will appear here"></textarea>
 
     <h2>Chat</h2>
     <textarea id="chat-box" readonly style="width: 100%; height: 200px;"></textarea>
