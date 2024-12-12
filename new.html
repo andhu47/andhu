@@ -16,13 +16,7 @@
         function initializeConnection() {
             peerConnection = new RTCPeerConnection(config);
 
-            peerConnection.onicecandidate = (event) => {
-                if (!event.candidate) {
-                    document.getElementById("connection-data").value = JSON.stringify(peerConnection.localDescription);
-                }
-            };
-
-            peerConnection.onicegatheringstatechange = () => {
+            peerConnection.onicecandidate = () => {
                 if (peerConnection.iceGatheringState === "complete") {
                     document.getElementById("connection-data").value = JSON.stringify(peerConnection.localDescription);
                 }
@@ -37,6 +31,8 @@
 
             peerConnection.createOffer().then((offer) => {
                 return peerConnection.setLocalDescription(offer);
+            }).then(() => {
+                console.log("Offer created and set as local description.");
             }).catch(console.error);
         }
 
@@ -57,23 +53,25 @@
         function handleConnectionData() {
             const connectionData = JSON.parse(document.getElementById("connection-input").value);
 
-            peerConnection = new RTCPeerConnection(config);
+            if (!peerConnection) {
+                peerConnection = new RTCPeerConnection(config);
 
-            peerConnection.ondatachannel = (event) => {
-                setupDataChannel(event.channel);
-            };
+                peerConnection.onicecandidate = () => {
+                    if (peerConnection.iceGatheringState === "complete") {
+                        document.getElementById("connection-data").value = JSON.stringify(peerConnection.localDescription);
+                    }
+                };
 
-            peerConnection.onicecandidate = (event) => {
-                if (!event.candidate) {
-                    document.getElementById("connection-data").value = JSON.stringify(peerConnection.localDescription);
-                }
-            };
+                peerConnection.ondatachannel = (event) => {
+                    setupDataChannel(event.channel);
+                };
+            }
 
             peerConnection.setRemoteDescription(new RTCSessionDescription(connectionData)).then(() => {
                 if (connectionData.type === "offer") {
-                    peerConnection.createAnswer().then((answer) => {
+                    return peerConnection.createAnswer().then((answer) => {
                         return peerConnection.setLocalDescription(answer);
-                    }).catch(console.error);
+                    });
                 }
             }).catch(console.error);
         }
@@ -107,5 +105,6 @@
     <br>
     <input id="message-input" type="text" placeholder="Type your message" disabled>
     <button onclick="sendMessage()">Send</button>
+    <footer>ahmed Saeed</footer>
 </body>
 </html>
