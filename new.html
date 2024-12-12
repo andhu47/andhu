@@ -21,8 +21,9 @@
             peerConnection = new RTCPeerConnection(config);
 
             peerConnection.onicecandidate = (event) => {
-                if (peerConnection.iceGatheringState === "complete") {
-                    document.getElementById("connection-data").value = JSON.stringify(peerConnection.localDescription);
+                if (!event.candidate) {
+                    const shortCode = btoa(JSON.stringify(peerConnection.localDescription)).substring(0, 50);
+                    document.getElementById("connection-data").value = shortCode;
                 }
             };
 
@@ -53,14 +54,16 @@
         }
 
         function handleConnectionData() {
-            const connectionData = JSON.parse(document.getElementById("connection-input").value);
+            const shortCode = document.getElementById("connection-input").value;
+            const connectionData = JSON.parse(atob(shortCode));
 
             if (!peerConnection) {
                 peerConnection = new RTCPeerConnection(config);
 
                 peerConnection.onicecandidate = (event) => {
-                    if (peerConnection.iceGatheringState === "complete") {
-                        document.getElementById("connection-data").value = JSON.stringify(peerConnection.localDescription);
+                    if (!event.candidate) {
+                        const shortCode = btoa(JSON.stringify(peerConnection.localDescription)).substring(0, 50);
+                        document.getElementById("connection-data").value = shortCode;
                     }
                 };
 
