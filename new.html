@@ -17,7 +17,11 @@
             peerConnection = new RTCPeerConnection(config);
 
             peerConnection.onicecandidate = (event) => {
-                if (!event.candidate) {
+                console.log("ICE candidate event: ", event);
+            };
+
+            peerConnection.onicegatheringstatechange = () => {
+                if (peerConnection.iceGatheringState === "complete") {
                     document.getElementById("connection-data").value = JSON.stringify(peerConnection.localDescription);
                 }
             };
@@ -93,5 +97,6 @@
     <br>
     <input id="message-input" type="text" placeholder="Type your message" disabled>
     <button onclick="sendMessage()">Send</button>
+<footer>Ahmed Saeed</footer>
 </body>
 </html>
