@@ -13,15 +13,12 @@
             ],
         };
 
-        function initializeConnection(isInitiator) {
+        function initializeConnection() {
             peerConnection = new RTCPeerConnection(config);
 
             peerConnection.onicecandidate = (event) => {
-                if (event.candidate) return;
-                if (isInitiator) {
-                    peerConnection.createOffer().then((offer) => {
-                        return peerConnection.setLocalDescription(offer);
-                    }).catch(console.error);
+                if (event.candidate) {
+                    console.log("ICE candidate:", event.candidate);
                 }
             };
 
@@ -29,14 +26,19 @@
                 setupDataChannel(event.channel);
             };
 
-            if (isInitiator) {
-                dataChannel = peerConnection.createDataChannel("chat");
-                setupDataChannel(dataChannel);
-            }
+            dataChannel = peerConnection.createDataChannel("chat");
+            setupDataChannel(dataChannel);
+
+            peerConnection.createOffer().then((offer) => {
+                return peerConnection.setLocalDescription(offer);
+            }).then(() => {
+                console.log("Offer created:", peerConnection.localDescription);
+            }).catch(console.error);
         }
 
         function setupDataChannel(channel) {
             channel.onopen = () => {
+                console.log("Data channel open");
                 document.getElementById("message-input").disabled = false;
             };
 
@@ -45,19 +47,20 @@
                 messageBox.value += `Friend: ${event.data}\n`;
             };
 
+            channel.onclose = () => {
+                console.log("Data channel closed");
+                document.getElementById("message-input").disabled = true;
+            };
+
             dataChannel = channel;
         }
 
-        function connect() {
-            const connectionInput = document.getElementById("connection-input").value;
-            const connectionData = JSON.parse(connectionInput);
-
+        function connectWithPeer() {
             peerConnection = new RTCPeerConnection(config);
 
             peerConnection.onicecandidate = (event) => {
-                if (!event.candidate) {
-                    const connectionOutput = JSON.stringify(peerConnection.localDescription);
-                    document.getElementById("connection-output").value = connectionOutput;
+                if (event.candidate) {
+                    console.log("ICE candidate:", event.candidate);
                 }
             };
 
@@ -65,12 +68,10 @@
                 setupDataChannel(event.channel);
             };
 
-            peerConnection.setRemoteDescription(new RTCSessionDescription(connectionData)).then(() => {
-                if (connectionData.type === "offer") {
-                    peerConnection.createAnswer().then((answer) => {
-                        return peerConnection.setLocalDescription(answer);
-                    }).catch(console.error);
-                }
+            navigator.mediaDevices.getUserMedia({ video: false, audio: true }).then(() => {
+                return peerConnection.createAnswer();
+            }).then((answer) => {
+                return peerConnection.setLocalDescription(answer);
             }).catch(console.error);
         }
 
@@ -86,19 +87,14 @@
             }
         }
 
-        window.onload = () => {
-            initializeConnection(true);
-        };
+        window.onload = initializeConnection;
     </script>
 </head>
 <body>
     <h1>Simple Secure Chat</h1>
 
-    <h2>Step 1: Connect</h2>
-    <textarea id="connection-input" placeholder="Paste connection data here"></textarea>
-    <button onclick="connect()">Connect</button>
-
-    <textarea id="connection-output" placeholder="Your connection data will appear here"></textarea>
+    <h2>Connection</h2>
+    <button onclick="connectWithPeer()">Connect to Peer</button>
 
     <h2>Chat</h2>
     <textarea id="chat-box" readonly style="width: 100%; height: 200px;"></textarea>
