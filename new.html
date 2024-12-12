@@ -17,7 +17,9 @@
             peerConnection = new RTCPeerConnection(config);
 
             peerConnection.onicecandidate = (event) => {
-                console.log("ICE candidate event: ", event);
+                if (!event.candidate) {
+                    document.getElementById("connection-data").value = JSON.stringify(peerConnection.localDescription);
+                }
             };
 
             peerConnection.onicegatheringstatechange = () => {
@@ -55,9 +57,17 @@
         function handleConnectionData() {
             const connectionData = JSON.parse(document.getElementById("connection-input").value);
 
-            if (!peerConnection) {
-                initializeConnection();
-            }
+            peerConnection = new RTCPeerConnection(config);
+
+            peerConnection.ondatachannel = (event) => {
+                setupDataChannel(event.channel);
+            };
+
+            peerConnection.onicecandidate = (event) => {
+                if (!event.candidate) {
+                    document.getElementById("connection-data").value = JSON.stringify(peerConnection.localDescription);
+                }
+            };
 
             peerConnection.setRemoteDescription(new RTCSessionDescription(connectionData)).then(() => {
                 if (connectionData.type === "offer") {
@@ -97,6 +107,5 @@
     <br>
     <input id="message-input" type="text" placeholder="Type your message" disabled>
     <button onclick="sendMessage()">Send</button>
-<footer>Ahmed Saeed</footer>
 </body>
 </html>
