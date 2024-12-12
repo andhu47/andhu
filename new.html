@@ -13,6 +13,10 @@
             ],
         };
 
+        window.onload = () => {
+            initializeConnection();
+        };
+
         function initializeConnection() {
             peerConnection = new RTCPeerConnection(config);
 
@@ -90,8 +94,7 @@
 <body>
     <h1>Simple Secure Chat</h1>
 
-    <h2>Step 1: Generate or Paste Connection Code</h2>
-    <button onclick="initializeConnection()">Generate Code</button>
+    <h2>Step 1: Share or Paste Connection Code</h2>
     <textarea id="connection-data" placeholder="Share this connection code with your friend"></textarea>
 
     <h2>Step 2: Paste Code to Connect</h2>
